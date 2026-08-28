@@ -1,0 +1,8 @@
+POST https://jsonplaceholder.typicode.com/posts HTTP/1.1
+Content-Type: application/json; charset=utf-8
+
+{
+  "title": "Prueba de envío",
+  "body": "Datos enviados mediante petición HTTP POST",
+  "userId": 1
+}
