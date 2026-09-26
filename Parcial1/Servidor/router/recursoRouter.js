@@ -1,5 +1,21 @@
 const express = require ('express');
+const halson = require ('halson'); // Importamos la libreria HATEOAS
+const multer = require('multer'); // Importamos la libreria Multer para manejar archivos
+const path = require('path'); // Importamos el modulo path para manejar rutas de archivos
 const router = express.Router();
+
+//  Configuración de almacenamiento para multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/'); // Asegúrar de crear esta carpeta en la raíz de tu proyecto
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 // GET /recurso           -> lista o filtra usando query string (?nombre=...&categoria=...)
 // GET /recurso/:id       -> obtiene un recurso puntual usando parámetro de ruta
@@ -25,13 +41,15 @@ router.get ('/', (req,res,next) => {
   });
 });
 
-// POST /recurso   -> crea un recurso nuevo con el body de la petición
-router.post('/', (req, res, next) => {
-  const nuevoRecurso = req.body;
+// POST /recurso  -> crea un recurso nuevo recibiendo un archivo y el body
+router.post('/', upload.single('archivo'), (req, res, next) => {
+  const datosRecurso = req.body;     // Datos de texto enviados en el formulario
+  const archivoSubido = req.file;    // Información del archivo recibido
 
   res.status(201).json({
-    mensaje: 'Recurso creado correctamente',
-    data: nuevoRecurso
+    mensaje: 'Recurso y archivo creados correctamente',
+    data: datosRecurso,
+    fileInfo: archivoSubido || 'No se adjuntó ningún archivo'
   });
 });
 
