@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: API REST - Luna's Barber Studio
+  version: 1.0.0
+  description: Documentación de la API para el control de productos de barbería.
+
+servers:
+  - url: https://localhost:3102
+    description: Servidor HTTPS local
+
+paths:
+  /productos:
+    get:
+      summary: Listar productos
+      description: Obtiene el inventario completo de productos de barbería disponibles.
+      parameters:
+        - in: header
+          name: x-api-key
+          required: true
+          schema:
+            type: string
+          description: Clave de acceso a la API (API Key)
+      responses:
+        '200':
+          description: Petición exitosa. Retorna la lista de productos.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  codigo:
+                    type: integer
+                    example: 200
+                  total:
+                    type: integer
+                    example: 3
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        nombre:
+                          type: string
+                          example: Fussion Pomade
+                        categoria:
+                          type: string
+                          example: Fijación
+                        precio:
+                          type: number
+                          example: 220.00
+                        stock:
+                          type: integer
+                          example: 15
+        '401':
+          description: No autorizado. API Key faltante o incorrecta.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  codigo:
+                    type: integer
+                    example: 401
+                  mensaje:
+                    type: string
+                    example: Acceso denegado. API Key no proporcionada o inválida.
+        '500':
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  codigo:
+                    type: integer
+                    example: 500
+                  mensaje:
+                    type: string
+                    example: Error interno del servidor al procesar la solicitud.
