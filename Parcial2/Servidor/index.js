@@ -1,59 +1,88 @@
 const express = require('express');
-const https = require('https'); // 1. Módulo nativo para HTTPS
-const fs = require('fs');       // 2. Módulo nativo para leer archivos (certificados)
 const morgan = require('morgan');
 const cors = require('cors');
-const path = require('path'); // modulo de node para construir rutas de archivos/carpetas
+const path = require('path');
+const jwt = require('jsonwebtoken'); // 1. Importamos jsonwebtoken
 const recursoRouter = require('./router/recursoRouter.js');
-
-// ===== CONFIGURACIÓN DE OPCIONES HTTPS =====
-// 3. Carga de clave privada y certificado desde la carpeta 'ssl'
-const opciones = {
-  key: fs.readFileSync(path.join(__dirname, 'ssl/key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, 'ssl/cert.pem'))
-};
 
 const app = express();
 const PORT = 3000;
+const SECRET_KEY = 'mi_clave_secreta_super_segura'; // Clave para firmar los tokens
 
-app.set('view engine', 'pug'); // indica a express que use pug para renderizar las vistas con res.render()
-app.set('views', path.join(__dirname, 'views')); // indica en qué carpeta buscar los archivos .pug (carpeta "views")
+app.set('view engine', 'pug');
+app.set('views', path.join(__dirname, 'views'));
 
-// Middleware de terceros
-app.use(cors());          // Permite peticiones desde otros dominios/orígenes
-app.use(morgan('dev'));   // Registra en consola cada petición (método, ruta, status, tiempo)
+// Middlewares de terceros
+app.use(cors());
+app.use(morgan('dev'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ===== MIDDLEWARE DE APLICACIÓN (propio) =====
-// Función personalizada que se ejecuta antes de llegar a las rutas
+// Middleware propio (Logger)
 app.use((req, res, next) => {
   const fecha = new Date().toISOString();
   console.log('[Middleware propio] ' + fecha + ' - ' + req.method + ' ' + req.url);
   next();
 });
 
-// Middleware para poder leer JSON en el body de las peticiones (POST, PUT)
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ===== 🔑 RUTA DE LOGIN (Genera el JWT) =====
+app.post('/login', (req, res) => {
+  const { usuario, password } = req.body;
 
-// Ruta principal
-app.get('/', (req, res) => {
-  res.send('Servidor Express funcionando correctamente sobre HTTPS :D');
+  // Validamos unas credenciales de prueba (puedes cambiarlas)
+  if (usuario === 'admin' && password === '12345') {
+    const payload = { usuario: 'admin', rol: 'administrador' };
+    
+    // Creamos el token con vigencia de 1 hora
+    const token = jwt.sign(payload, SECRET_KEY, { expiresIn: '1h' });
+    
+    return res.json({
+      mensaje: '¡Login exitoso!',
+      token: token
+    });
+  }
+
+  res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
 });
 
-// Ruta de ejemplo que renderiza una vista con Pug
-app.get('/vista', (req, res, next) => {
-  res.render('inicio', {                      // Renderiza views/inicio.pug y le envía un objeto con datos
-    titulo: ' Servidor Express',              // Variable "titulo" disponible en la plantilla como #{titulo}
-    subtitulo: 'Ejercicio Pug funcionando'    // Variable "subtitulo" disponible en la plantilla como #{subtitulo}
+// ===== 🔒 MIDDLEWARE DE AUTENTICACIÓN CON JWT REAL =====
+const verificarJWT = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  // El formato estándar es "Bearer <token>"
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).send('Acceso denegado: Token no proporcionado en los Headers (Authorization: Bearer <token>)');
+  }
+
+  // Verificamos el token usando la clave secreta
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) {
+      return res.status(403).send('Acceso denegado: Token inválido o expirado');
+    }
+    
+    req.user = user; // Guardamos los datos del usuario decodificados en la petición si los necesitas luego
+    next();
+  });
+};
+
+// Ruta pública
+app.get('/', (req, res) => {
+  res.send('Servidor Express funcionando correctamente :D. Haz un POST a /login para obtener tu token.');
+});
+
+// Ruta de vista Pug (PROTEGIDA CON JWT)
+app.get('/vista', verificarJWT, (req, res) => {
+  res.render('inicio', {
+    titulo: 'Servidor Express',
+    subtitulo: 'Ejercicio Pug funcionando con JWT real'
   });
 });
 
-// Rutas del recurso (usa Router, req.params y req.query)
-app.use('/recurso', recursoRouter.router);
+// Rutas de recurso (PROTEGIDAS CON JWT)
+app.use('/recurso', verificarJWT, recursoRouter.router);
 
-// ===== INICIAR EL SERVIDOR SEGURO =====
-// 4. Se reemplaza app.listen por https.createServer(opciones, app).listen
-https.createServer(opciones, app).listen(PORT, () => {
-  console.log(`Servidor Express Seguro en puerto ${PORT}`);
-  console.log(`Accede en: https://localhost:${PORT}`);
+// Iniciar servidor
+app.listen(PORT, () => {
+  console.log(`Servidor activo en http://localhost:${PORT}`);
 });
