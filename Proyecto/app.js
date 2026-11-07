@@ -79,17 +79,7 @@ app.get('/api/productos', (req, res) => {
     });
 });
 
-// Encender el servidor solo si no estamos ejecutando pruebas
-// const PORT = 3102;
-// if (process.env.NODE_ENV !== 'test') {
-//     app.listen(PORT, () => {
-//         console.log(`Servidor corriendo en http://localhost:${PORT}/docs`);
-//         console.log(`Documentación con Stoplight disponible en http://localhost:${PORT}/docs`);
-//     });
-// }
 
-// // Exportar la app para Supertest
-// module.exports = app;
 
 // Encender el servidor solo si no estamos ejecutando pruebas
 const PORT = 3102;
@@ -99,5 +89,5 @@ if (process.env.NODE_ENV !== 'test') {
     });
 }
 
-// ESTO ES OBLIGATORIO para que Supertest pueda leer tu app
+
 module.exports = app;
