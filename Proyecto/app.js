@@ -6,6 +6,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Clave de autenticación formal para producción/pruebas
+const BARBER_API_KEY = "BARBER_SECURE_AUTH_KEY_2026";
+
 // 1. Servir el archivo openapi.yaml desde la carpeta docs interna
 app.use('/openapi.yaml', express.static(path.join(__dirname, 'docs/openapi.yaml')));
 
@@ -38,7 +41,7 @@ app.get('/docs', (req, res) => {
 app.get('/api/productos', (req, res) => {
     const apiKey = req.headers['x-api-key'];
     
-    if (!apiKey || apiKey !== 'mi_super_api_key_123') {
+    if (!apiKey || apiKey !== BARBER_API_KEY) {
         return res.status(401).json({
             status: "error",
             codigo: 401,
@@ -76,9 +79,25 @@ app.get('/api/productos', (req, res) => {
     });
 });
 
-// Encender el servidor
+// Encender el servidor solo si no estamos ejecutando pruebas
+// const PORT = 3102;
+// if (process.env.NODE_ENV !== 'test') {
+//     app.listen(PORT, () => {
+//         console.log(`Servidor corriendo en http://localhost:${PORT}/docs`);
+//         console.log(`Documentación con Stoplight disponible en http://localhost:${PORT}/docs`);
+//     });
+// }
+
+// // Exportar la app para Supertest
+// module.exports = app;
+
+// Encender el servidor solo si no estamos ejecutando pruebas
 const PORT = 3102;
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}/docs`);
-    console.log(`Documentación con Stoplight disponible en http://localhost:${PORT}/docs`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, () => {
+        console.log(`Servidor corriendo en http://localhost:${PORT}/docs`);
+    });
+}
+
+// ESTO ES OBLIGATORIO para que Supertest pueda leer tu app
+module.exports = app;
